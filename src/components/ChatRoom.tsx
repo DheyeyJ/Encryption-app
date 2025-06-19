@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { EncryptionService } from '@/lib/crypto'
 import { Message, Room, ChatMessage } from '@/lib/types'
