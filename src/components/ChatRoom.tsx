@@ -18,22 +18,20 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
   const [newMessage, setNewMessage] = useState('')
   const [encryptionService, setEncryptionService] = useState<EncryptionService | null>(null)
   const [isEncrypted, setIsEncrypted] = useState(false)
+  const [userMap, setUserMap] = useState<Record<string, string>>({})
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Set encryption service when room changes
+  // Initialize user map with current user
   useEffect(() => {
-    if (room.encryption_key) {
-      setEncryptionService(new EncryptionService(room.encryption_key))
-      setIsEncrypted(true)
-    } else {
-      setEncryptionService(null)
-      setIsEncrypted(false)
-    }
-  }, [room.id, room.encryption_key])
+    setUserMap(prev => ({
+      ...prev,
+      [currentUserId]: username
+    }))
+  }, [currentUserId, username])
 
-  // Load messages and subscribe when encryptionService is ready
+  // Load messages and subscribe when room changes
   useEffect(() => {
-    if (room.encryption_key && !encryptionService) return
     const loadMessages = async () => {
       const { data, error } = await supabase
         .from('messages')
@@ -47,33 +45,41 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
         return
       }
 
-      const chatMessages: ChatMessage[] = data.map((msg: Message) => ({
-        id: msg.id,
-        content: msg.encrypted && encryptionService 
-          ? encryptionService.decrypt(msg.content)
-          : msg.content,
-        sender: msg.sender_id,
-        timestamp: msg.created_at,
-        isEncrypted: msg.encrypted,
-        isOwn: msg.sender_id === currentUserId
-      }))
+      const chatMessages: ChatMessage[] = data.map((msg: Message) => {
+        return {
+          id: msg.id,
+          content: msg.encrypted && encryptionService 
+            ? encryptionService.decrypt(msg.content)
+            : msg.content,
+          sender: msg.sender_id,
+          senderUsername: msg.sender_username,
+          timestamp: msg.created_at,
+          isEncrypted: msg.encrypted,
+          isOwn: msg.sender_id === currentUserId
+        }
+      })
 
       setMessages(chatMessages)
     }
 
     const subscribeToMessages = () => {
+      console.log('Setting up real-time subscription for room:', room.id)
+
       const subscription = supabase
         .channel(`room:${room.id}`)
-        .on('postgres_changes', 
+        .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${room.id}` },
           (payload) => {
+            console.log('New message received:', payload)
             const newMsg = payload.new as Message
+            
             const chatMessage: ChatMessage = {
               id: newMsg.id,
               content: newMsg.encrypted && encryptionService 
                 ? encryptionService.decrypt(newMsg.content)
                 : newMsg.content,
               sender: newMsg.sender_id,
+              senderUsername: newMsg.sender_username,
               timestamp: newMsg.created_at,
               isEncrypted: newMsg.encrypted,
               isOwn: newMsg.sender_id === currentUserId
@@ -81,9 +87,12 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
             setMessages(prev => [...prev, chatMessage])
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          console.log('Subscription status:', status)
+        })
 
       return () => {
+        console.log('Unsubscribing from room:', room.id)
         subscription.unsubscribe()
       }
     }
@@ -91,7 +100,27 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
     loadMessages()
     const unsubscribe = subscribeToMessages()
     return unsubscribe
-  }, [encryptionService, room.id, room.encryption_key, currentUserId])
+  }, [room.id, currentUserId, encryptionService])
+
+  // Set encryption service when room changes
+  useEffect(() => {
+    if (room.encryption_key) {
+      setEncryptionService(new EncryptionService(room.encryption_key))
+      setIsEncrypted(true)
+    } else {
+      setEncryptionService(null)
+      setIsEncrypted(false)
+    }
+  }, [room.id, room.encryption_key])
+
+  // Periodic refresh to ensure messages are up-to-date
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshMessages()
+    }, 10000) // Refresh every 10 seconds
+
+    return () => clearInterval(interval)
+  }, [room.id, currentUserId, encryptionService])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -105,29 +134,79 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
     e.preventDefault()
     if (!newMessage.trim()) return
 
-    let content = newMessage
+    const messageText = newMessage.trim()
+    setNewMessage('') // Clear input immediately for better UX
+
+    let content = messageText
     let encrypted = false
 
     if (encryptionService && isEncrypted) {
-      content = encryptionService.encrypt(newMessage)
+      content = encryptionService.encrypt(messageText)
       encrypted = true
     }
+
+    // Debug: Log the username being sent
+    console.log('Sending message with username:', username)
 
     const { error } = await supabase
       .from('messages')
       .insert({
         content,
         sender_id: currentUserId,
+        sender_username: username,
         room_id: room.id,
         encrypted
       })
 
+    // Debug: Log the error object
     if (error) {
-      console.error('Error sending message:', error)
+      console.error('Error sending message:', JSON.stringify(error, null, 2), error)
+      // Restore the message if sending failed
+      setNewMessage(messageText)
+      alert('Failed to send message. Please try again.')
       return
     }
 
-    setNewMessage('')
+    console.log('Message sent successfully')
+    
+    // Auto-refresh messages after sending
+    setTimeout(() => {
+      refreshMessages()
+    }, 500) // Small delay to ensure the message is saved
+  }
+
+  const refreshMessages = async () => {
+    if (isRefreshing) return // Prevent multiple simultaneous refreshes
+    
+    setIsRefreshing(true)
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('room_id', room.id)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Error refreshing messages:', error)
+      setIsRefreshing(false)
+      return
+    }
+
+    const chatMessages: ChatMessage[] = data.map((msg: Message) => {
+      return {
+        id: msg.id,
+        content: msg.encrypted && encryptionService 
+          ? encryptionService.decrypt(msg.content)
+          : msg.content,
+        sender: msg.sender_id,
+        senderUsername: msg.sender_username,
+        timestamp: msg.created_at,
+        isEncrypted: msg.encrypted,
+        isOwn: msg.sender_id === currentUserId
+      }
+    })
+
+    setMessages(chatMessages)
+    setIsRefreshing(false)
   }
 
   const toggleEncryption = () => {
@@ -145,14 +224,23 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
         isEncrypted={isEncrypted}
         onToggleEncryption={toggleEncryption}
         canEncrypt={!!room.encryption_key}
+        onRefresh={refreshMessages}
       />
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {isRefreshing && (
+          <div className="flex justify-center py-2">
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Refreshing messages...</span>
+            </div>
+          </div>
+        )}
         {messages.map((message) => (
           <MessageBubble
             key={message.id}
             message={message}
-            username={username}
+            username={userMap[message.sender] || 'Unknown User'}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -165,7 +253,7 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={isEncrypted ? "Type encrypted message..." : "Type message..."}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600"
           />
           <button
             type="submit"

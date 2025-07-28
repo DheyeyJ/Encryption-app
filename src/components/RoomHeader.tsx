@@ -5,13 +5,15 @@ interface RoomHeaderProps {
   isEncrypted: boolean
   onToggleEncryption: () => void
   canEncrypt: boolean
+  onRefresh?: () => void
 }
 
 export default function RoomHeader({ 
   roomName, 
   isEncrypted, 
   onToggleEncryption, 
-  canEncrypt 
+  canEncrypt,
+  onRefresh
 }: RoomHeaderProps) {
   return (
     <div className="flex items-center justify-between p-4 bg-white border-b">
@@ -24,18 +26,29 @@ export default function RoomHeader({
         )}
       </div>
       
-      {canEncrypt && (
-        <button
-          onClick={onToggleEncryption}
-          className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
-            isEncrypted
-              ? 'bg-green-500 text-white border-green-500 hover:bg-green-600'
-              : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-          }`}
-        >
-          {isEncrypted ? 'Disable Encryption' : 'Enable Encryption'}
-        </button>
-      )}
+      <div className="flex items-center space-x-2">
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            title="Refresh messages"
+          >
+            🔄
+          </button>
+        )}
+        {canEncrypt && (
+          <button
+            onClick={onToggleEncryption}
+            className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
+              isEncrypted
+                ? 'bg-green-500 text-white border-green-500 hover:bg-green-600'
+                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+            }`}
+          >
+            {isEncrypted ? 'Disable Encryption' : 'Enable Encryption'}
+          </button>
+        )}
+      </div>
     </div>
   )
 } 

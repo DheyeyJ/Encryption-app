@@ -24,7 +24,7 @@ export default function ChatApp() {
       <div className="flex-1 flex flex-col">
         <Auth onAuth={setCurrentUser} />
         <div className="flex flex-1">
-          <RoomList 
+          <RoomList
             onRoomSelect={handleRoomSelect}
             currentRoomId={selectedRoom?.id}
           />
@@ -33,13 +33,13 @@ export default function ChatApp() {
               <ChatRoom
                 room={selectedRoom}
                 currentUserId={currentUser.id}
-                username={currentUser.email || currentUser.id}
+                username={currentUser.user_metadata?.username || currentUser.email || currentUser.id}
               />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <h2 className="text-2xl font-semibold text-gray-600 mb-4">
-                    Welcome to Encrypted Chat
+                    Welcome to EnChat
                   </h2>
                   <p className="text-gray-500 mb-4">
                     Select a room from the sidebar to start chatting
@@ -56,4 +56,4 @@ export default function ChatApp() {
       </div>
     </div>
   )
-} 
+}

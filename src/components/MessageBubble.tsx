@@ -24,7 +24,7 @@ export default function MessageBubble({ message, username }: MessageBubbleProps)
       }`}>
         <div className="flex items-center space-x-2 mb-1">
           <span className="text-sm font-medium">
-            {message.isOwn ? username : `User ${message.sender.slice(0, 8)}`}
+            {message.isOwn ? username : message.senderUsername || message.sender}
           </span>
           {message.isEncrypted && (
             <span className="text-xs">🔒</span>

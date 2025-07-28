@@ -103,7 +103,7 @@ export default function RoomList({ onRoomSelect, currentRoomId }: RoomListProps)
               value={newRoomName}
               onChange={(e) => setNewRoomName(e.target.value)}
               placeholder="Room name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600"
             />
             <div className="mt-2 flex items-center">
               <input

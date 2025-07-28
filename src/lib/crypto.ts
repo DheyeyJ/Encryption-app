@@ -19,12 +19,9 @@ export class EncryptionService {
   generateKey(): string {
     return CryptoJS.lib.WordArray.random(32).toString()
   }
-
-  hashPassword(password: string): string {
-    return CryptoJS.SHA256(password).toString()
-  }
 }
 
 export const generateRoomKey = (): string => {
   return CryptoJS.lib.WordArray.random(32).toString()
-} 
+}
+
