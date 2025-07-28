@@ -53,14 +53,36 @@ export default function Auth({ onAuth }: { onAuth: (user: User | null) => void }
         }
       }
     });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+    } else {
+      alert("Registration successful! Please check your email to verify your account, then sign in using the sign in page.");
+      setShowRegister(false);
+      setEmail("");
+      setPassword("");
+      setUsername("");
+    }
     setLoading(false);
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    onAuth(null);
+    console.log('Logout button clicked');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+        alert('Failed to logout: ' + error.message);
+        return;
+      }
+      console.log('Logout successful');
+      setSession(null);
+      onAuth(null);
+      // Clear any stored session data
+      localStorage.removeItem('supabase.auth.token');
+    } catch (err) {
+      console.error('Logout exception:', err);
+      alert('Failed to logout. Please try again.');
+    }
   };
 
   if (session && session.user) {
@@ -121,7 +143,7 @@ export default function Auth({ onAuth }: { onAuth: (user: User | null) => void }
                     placeholder="Enter your email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600 text-gray-600"
                     required
                   />
                 </div>
@@ -135,7 +157,7 @@ export default function Auth({ onAuth }: { onAuth: (user: User | null) => void }
                     placeholder="Enter your password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600 text-gray-600"
                     required
                   />
                 </div>
@@ -181,7 +203,7 @@ export default function Auth({ onAuth }: { onAuth: (user: User | null) => void }
                     placeholder="Enter your email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600 text-gray-600"
                     required
                   />
                 </div>
@@ -195,7 +217,7 @@ export default function Auth({ onAuth }: { onAuth: (user: User | null) => void }
                     placeholder="Choose a username"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600 text-gray-600"
                     required
                     minLength={3}
                     maxLength={20}
@@ -211,7 +233,7 @@ export default function Auth({ onAuth }: { onAuth: (user: User | null) => void }
                     placeholder="Enter your password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 placeholder-gray-600 text-gray-600"
                     required
                   />
                 </div>

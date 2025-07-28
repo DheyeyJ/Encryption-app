@@ -253,7 +253,7 @@ export default function ChatRoom({ room, currentUserId, username }: ChatRoomProp
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={isEncrypted ? "Type encrypted message..." : "Type message..."}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600 text-gray-600"
           />
           <button
             type="submit"
